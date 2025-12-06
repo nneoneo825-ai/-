@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Users, 
   Shield, 
@@ -19,7 +20,10 @@ import {
   FileText,
   Calendar,
   Download,
-  X
+  X,
+  Upload,
+  FolderPlus,
+  MoreHorizontal
 } from 'lucide-react';
 import { Role } from '../types';
 
@@ -169,7 +173,116 @@ const MOCK_LOGS: SystemLog[] = [
 // --- Sub-components ---
 
 const UserManagementTab = () => {
+    const [users, setUsers] = useState<SystemUser[]>(MOCK_USERS);
     const [searchTerm, setSearchTerm] = useState('');
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Form State
+    const [formData, setFormData] = useState<{
+        name: string;
+        username: string;
+        org: string;
+        roles: Role[];
+        status: 'active' | 'inactive';
+    }>({
+        name: '',
+        username: '',
+        org: '',
+        roles: [],
+        status: 'active'
+    });
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            alert(`已成功导入文件: ${file.name}\n新增用户: 5人\n更新用户: 2人`);
+            event.target.value = '';
+        }
+    };
+
+    const filteredUsers = users.filter(user => 
+        user.name.includes(searchTerm) || 
+        user.username.includes(searchTerm) ||
+        user.org.includes(searchTerm)
+    );
+
+    const openAddModal = () => {
+        setEditingId(null);
+        setFormData({
+            name: '',
+            username: '',
+            org: '',
+            roles: [Role.TEACHER], // Default role
+            status: 'active'
+        });
+        setIsModalOpen(true);
+    };
+
+    const openEditModal = (user: SystemUser) => {
+        setEditingId(user.id);
+        setFormData({
+            name: user.name,
+            username: user.username,
+            org: user.org,
+            roles: user.roles,
+            status: user.status
+        });
+        setIsModalOpen(true);
+    };
+
+    const handleDelete = (id: string) => {
+        if (window.confirm('确定要删除该用户吗？此操作无法撤销。')) {
+            setUsers(users.filter(u => u.id !== id));
+        }
+    };
+
+    const handleRoleChange = (role: Role) => {
+        setFormData(prev => {
+            if (prev.roles.includes(role)) {
+                return { ...prev, roles: prev.roles.filter(r => r !== role) };
+            } else {
+                return { ...prev, roles: [...prev.roles, role] };
+            }
+        });
+    };
+
+    const handleSave = () => {
+        if (!formData.name.trim() || !formData.username.trim()) {
+            alert('请填写必填项');
+            return;
+        }
+
+        if (editingId) {
+            // Edit Existing User
+            setUsers(users.map(u => u.id === editingId ? {
+                ...u,
+                name: formData.name,
+                username: formData.username,
+                org: formData.org || '未分配',
+                roles: formData.roles,
+                status: formData.status
+            } : u));
+        } else {
+            // Add New User
+            const newUser: SystemUser = {
+                id: Date.now().toString(),
+                name: formData.name,
+                username: formData.username,
+                roles: formData.roles.length > 0 ? formData.roles : [Role.TEACHER],
+                org: formData.org || '未分配',
+                status: formData.status,
+                lastLogin: '-'
+            };
+            setUsers([...users, newUser]);
+        }
+        setIsModalOpen(false);
+    };
     
     return (
         <div className="space-y-4">
@@ -185,11 +298,25 @@ const UserManagementTab = () => {
                     />
                 </div>
                 <div className="flex space-x-2 w-full sm:w-auto">
-                    <button className="flex-1 sm:flex-none items-center justify-center inline-flex bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+                    <button 
+                        onClick={openAddModal}
+                        className="flex-1 sm:flex-none items-center justify-center inline-flex bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                    >
                         <Plus className="h-4 w-4 mr-2" />
                         新增用户
                     </button>
-                    <button className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50">
+                    <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        className="hidden"
+                        accept=".xlsx,.xls,.csv"
+                        onChange={handleFileUpload}
+                    />
+                    <button 
+                        onClick={handleImportClick}
+                        className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 flex items-center"
+                    >
+                        <Upload className="h-4 w-4 mr-2" />
                         批量导入
                     </button>
                 </div>
@@ -208,7 +335,7 @@ const UserManagementTab = () => {
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-slate-200">
-                        {MOCK_USERS.map((user) => (
+                        {filteredUsers.map((user) => (
                             <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                                 <td className="px-6 py-4 whitespace-nowrap">
                                     <div className="flex items-center">
@@ -249,10 +376,18 @@ const UserManagementTab = () => {
                                         <button className="p-1 text-slate-400 hover:text-blue-600 transition-colors" title="重置密码">
                                             <Key size={16} />
                                         </button>
-                                        <button className="p-1 text-slate-400 hover:text-blue-600 transition-colors" title="编辑">
+                                        <button 
+                                            onClick={() => openEditModal(user)}
+                                            className="p-1 text-slate-400 hover:text-blue-600 transition-colors" 
+                                            title="编辑"
+                                        >
                                             <Edit2 size={16} />
                                         </button>
-                                        <button className="p-1 text-slate-400 hover:text-red-600 transition-colors" title="删除">
+                                        <button 
+                                            onClick={() => handleDelete(user.id)}
+                                            className="p-1 text-slate-400 hover:text-red-600 transition-colors" 
+                                            title="删除"
+                                        >
                                             <Trash2 size={16} />
                                         </button>
                                     </div>
@@ -262,13 +397,115 @@ const UserManagementTab = () => {
                     </tbody>
                 </table>
                 <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-                    <span className="text-xs text-slate-500">显示 1 至 4 共 4 条记录</span>
-                    <div className="flex space-x-1">
-                        <button className="px-2 py-1 border border-slate-300 rounded bg-white text-xs disabled:opacity-50" disabled>上一页</button>
-                        <button className="px-2 py-1 border border-slate-300 rounded bg-white text-xs disabled:opacity-50" disabled>下一页</button>
-                    </div>
+                    <span className="text-xs text-slate-500">显示 {filteredUsers.length} 条记录</span>
                 </div>
             </div>
+
+            {/* Add/Edit User Modal */}
+            {isModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+                    <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden animate-fade-in-up">
+                        <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 bg-slate-50">
+                            <h3 className="text-lg font-bold text-slate-800">{editingId ? '编辑用户' : '新增用户'}</h3>
+                            <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">姓名 <span className="text-red-500">*</span></label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({...formData, name: e.target.value})}
+                                        className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="请输入姓名"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">账号/工号 <span className="text-red-500">*</span></label>
+                                    <input 
+                                        type="text" 
+                                        value={formData.username}
+                                        onChange={(e) => setFormData({...formData, username: e.target.value})}
+                                        className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="请输入账号"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">归属部门/班级</label>
+                                <input 
+                                    type="text" 
+                                    value={formData.org}
+                                    onChange={(e) => setFormData({...formData, org: e.target.value})}
+                                    className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    placeholder="例如：教务处 或 高一(1)班"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">角色分配 (可多选)</label>
+                                <div className="grid grid-cols-2 gap-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
+                                    {Object.values(Role).map((role) => (
+                                        <label key={role} className="flex items-center space-x-2 cursor-pointer">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={formData.roles.includes(role)}
+                                                onChange={() => handleRoleChange(role)}
+                                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-slate-300 rounded"
+                                            />
+                                            <span className="text-sm text-slate-700">{role}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">账户状态</label>
+                                <div className="flex space-x-4">
+                                    <label className="flex items-center cursor-pointer">
+                                        <input 
+                                            type="radio" 
+                                            name="status"
+                                            checked={formData.status === 'active'}
+                                            onChange={() => setFormData({...formData, status: 'active'})}
+                                            className="h-4 w-4 text-green-600 focus:ring-green-500 border-slate-300"
+                                        />
+                                        <span className="ml-2 text-sm text-slate-700">启用</span>
+                                    </label>
+                                    <label className="flex items-center cursor-pointer">
+                                        <input 
+                                            type="radio" 
+                                            name="status"
+                                            checked={formData.status === 'inactive'}
+                                            onChange={() => setFormData({...formData, status: 'inactive'})}
+                                            className="h-4 w-4 text-red-600 focus:ring-red-500 border-slate-300"
+                                        />
+                                        <span className="ml-2 text-sm text-slate-700">禁用</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="px-6 py-4 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+                            <button 
+                                onClick={() => setIsModalOpen(false)}
+                                className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-white"
+                            >
+                                取消
+                            </button>
+                            <button 
+                                onClick={handleSave}
+                                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 shadow-sm"
+                            >
+                                保存
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -345,7 +582,16 @@ const RoleManagementTab = () => {
 };
 
 // Recursive Tree Node Component
-const TreeNode: React.FC<{ node: OrgNode, level?: number, expandTrigger?: number }> = ({ node, level = 0, expandTrigger = 0 }) => {
+interface TreeNodeProps {
+    node: OrgNode;
+    level?: number;
+    expandTrigger?: number;
+    onAdd: (node: OrgNode) => void;
+    onEdit: (node: OrgNode) => void;
+    onDelete: (node: OrgNode) => void;
+}
+
+const TreeNode: React.FC<TreeNodeProps> = ({ node, level = 0, expandTrigger = 0, onAdd, onEdit, onDelete }) => {
     const [isOpen, setIsOpen] = useState(true);
     const paddingLeft = level * 20 + 12;
 
@@ -364,7 +610,7 @@ const TreeNode: React.FC<{ node: OrgNode, level?: number, expandTrigger?: number
             >
                 <button 
                     onClick={() => setIsOpen(!isOpen)}
-                    className={`p-1 mr-2 rounded hover:bg-slate-200 text-slate-400 ${!node.children ? 'invisible' : ''}`}
+                    className={`p-1 mr-2 rounded hover:bg-slate-200 text-slate-400 ${!node.children || node.children.length === 0 ? 'invisible' : ''}`}
                 >
                     {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                 </button>
@@ -385,13 +631,25 @@ const TreeNode: React.FC<{ node: OrgNode, level?: number, expandTrigger?: number
                 </span>
 
                 <div className="ml-auto opacity-0 group-hover:opacity-100 flex items-center space-x-2">
-                     <button className="p-1 text-slate-400 hover:text-blue-600" title="添加子节点">
+                     <button 
+                        onClick={() => onAdd(node)}
+                        className="p-1 text-slate-400 hover:text-blue-600" 
+                        title="添加子节点"
+                    >
                         <Plus size={14} />
                      </button>
-                     <button className="p-1 text-slate-400 hover:text-blue-600" title="编辑">
+                     <button 
+                        onClick={() => onEdit(node)}
+                        className="p-1 text-slate-400 hover:text-blue-600" 
+                        title="编辑"
+                    >
                         <Edit2 size={14} />
                      </button>
-                     <button className="p-1 text-slate-400 hover:text-red-600" title="删除">
+                     <button 
+                        onClick={() => onDelete(node)}
+                        className="p-1 text-slate-400 hover:text-red-600" 
+                        title="删除"
+                    >
                         <Trash2 size={14} />
                      </button>
                 </div>
@@ -399,7 +657,15 @@ const TreeNode: React.FC<{ node: OrgNode, level?: number, expandTrigger?: number
             {isOpen && node.children && (
                 <div className="border-l border-slate-100 ml-[26px]">
                     {node.children.map(child => (
-                        <TreeNode key={child.id} node={child} level={level + 1} expandTrigger={expandTrigger} />
+                        <TreeNode 
+                            key={child.id} 
+                            node={child} 
+                            level={level + 1} 
+                            expandTrigger={expandTrigger}
+                            onAdd={onAdd}
+                            onEdit={onEdit}
+                            onDelete={onDelete}
+                        />
                     ))}
                 </div>
             )}
@@ -409,31 +675,112 @@ const TreeNode: React.FC<{ node: OrgNode, level?: number, expandTrigger?: number
 
 const OrgManagementTab = () => {
     const [treeData, setTreeData] = useState<OrgNode[]>(MOCK_ORG_TREE);
-    const [expandTrigger, setExpandTrigger] = useState(0); // Used to signal expand all
-    const [isRootModalOpen, setIsRootModalOpen] = useState(false);
+    const [expandTrigger, setExpandTrigger] = useState(0); 
+    const [modalType, setModalType] = useState<'root' | 'child' | 'edit' | null>(null);
+    const [currentNode, setCurrentNode] = useState<OrgNode | null>(null);
     
-    // Form state for adding root node
-    const [newRootName, setNewRootName] = useState('');
-    const [newRootType, setNewRootType] = useState('group');
+    const [formData, setFormData] = useState({
+        name: '',
+        type: 'group'
+    });
 
     const handleExpandAll = () => {
         setExpandTrigger(prev => prev + 1);
     };
 
-    const handleAddRootNode = () => {
-        if (!newRootName.trim()) return;
+    // Recursive helpers to update tree state
+    const addChildToNode = (nodes: OrgNode[], parentId: string, newChild: OrgNode): OrgNode[] => {
+        return nodes.map(node => {
+            if (node.id === parentId) {
+                return { ...node, children: [...(node.children || []), newChild] };
+            }
+            if (node.children) {
+                return { ...node, children: addChildToNode(node.children, parentId, newChild) };
+            }
+            return node;
+        });
+    };
 
-        const newNode: OrgNode = {
-            id: `root-${Date.now()}`,
-            label: newRootName,
-            type: newRootType as any,
-            children: []
-        };
+    const updateNodeInTree = (nodes: OrgNode[], nodeId: string, updatedData: Partial<OrgNode>): OrgNode[] => {
+        return nodes.map(node => {
+            if (node.id === nodeId) {
+                return { ...node, ...updatedData };
+            }
+            if (node.children) {
+                return { ...node, children: updateNodeInTree(node.children, nodeId, updatedData) };
+            }
+            return node;
+        });
+    };
+
+    const deleteNodeFromTree = (nodes: OrgNode[], nodeId: string): OrgNode[] => {
+        return nodes.filter(node => node.id !== nodeId).map(node => {
+            if (node.children) {
+                return { ...node, children: deleteNodeFromTree(node.children, nodeId) };
+            }
+            return node;
+        });
+    };
+
+    // Handlers
+    const handleAddRootClick = () => {
+        setModalType('root');
+        setFormData({ name: '', type: 'group' });
+    };
+
+    const handleAddChildClick = (node: OrgNode) => {
+        setCurrentNode(node);
+        setModalType('child');
+        // Predict next type based on parent type
+        let nextType = 'dept';
+        if (node.type === 'group') nextType = 'school';
+        if (node.type === 'school') nextType = 'grade';
+        if (node.type === 'grade') nextType = 'class';
         
-        setTreeData([...treeData, newNode]);
-        setIsRootModalOpen(false);
-        setNewRootName('');
-        setNewRootType('group');
+        setFormData({ name: '', type: nextType });
+    };
+
+    const handleEditClick = (node: OrgNode) => {
+        setCurrentNode(node);
+        setModalType('edit');
+        setFormData({ name: node.label, type: node.type });
+    };
+
+    const handleDeleteClick = (node: OrgNode) => {
+        if (window.confirm(`确定要删除 "${node.label}" 及其所有子节点吗？`)) {
+            setTreeData(prev => deleteNodeFromTree(prev, node.id));
+        }
+    };
+
+    const handleSubmit = () => {
+        if (!formData.name.trim()) return;
+
+        if (modalType === 'root') {
+            const newNode: OrgNode = {
+                id: `root-${Date.now()}`,
+                label: formData.name,
+                type: formData.type as any,
+                children: []
+            };
+            setTreeData([...treeData, newNode]);
+        } else if (modalType === 'child' && currentNode) {
+            const newNode: OrgNode = {
+                id: `node-${Date.now()}`,
+                label: formData.name,
+                type: formData.type as any,
+                children: []
+            };
+            setTreeData(prev => addChildToNode(prev, currentNode.id, newNode));
+            // Auto expand to show new node? The parent is already open if we clicked add button.
+        } else if (modalType === 'edit' && currentNode) {
+            setTreeData(prev => updateNodeInTree(prev, currentNode.id, {
+                label: formData.name,
+                type: formData.type as any
+            }));
+        }
+
+        setModalType(null);
+        setCurrentNode(null);
     };
 
     return (
@@ -448,7 +795,7 @@ const OrgManagementTab = () => {
                         全部展开
                     </button>
                     <button 
-                        onClick={() => setIsRootModalOpen(true)}
+                        onClick={handleAddRootClick}
                         className="px-3 py-1.5 text-xs font-medium bg-blue-600 text-white rounded-md hover:bg-blue-700"
                     >
                         + 新增根节点
@@ -457,17 +804,28 @@ const OrgManagementTab = () => {
             </div>
             <div className="p-2 overflow-auto flex-1">
                 {treeData.map(node => (
-                    <TreeNode key={node.id} node={node} expandTrigger={expandTrigger} />
+                    <TreeNode 
+                        key={node.id} 
+                        node={node} 
+                        expandTrigger={expandTrigger}
+                        onAdd={handleAddChildClick}
+                        onEdit={handleEditClick}
+                        onDelete={handleDeleteClick}
+                    />
                 ))}
             </div>
 
-            {/* Add Root Node Modal */}
-            {isRootModalOpen && (
+            {/* Modal */}
+            {modalType && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-black bg-opacity-30 rounded-xl">
                     <div className="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden animate-fade-in-up">
                         <div className="flex justify-between items-center px-4 py-3 border-b border-slate-100 bg-slate-50">
-                            <h3 className="text-sm font-bold text-slate-800">新增根节点</h3>
-                            <button onClick={() => setIsRootModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                            <h3 className="text-sm font-bold text-slate-800">
+                                {modalType === 'root' ? '新增根节点' : 
+                                 modalType === 'child' ? `新增子节点 (父级: ${currentNode?.label})` : 
+                                 '编辑节点'}
+                            </h3>
+                            <button onClick={() => setModalType(null)} className="text-slate-400 hover:text-slate-600">
                                 <X size={16} />
                             </button>
                         </div>
@@ -478,32 +836,34 @@ const OrgManagementTab = () => {
                                     type="text" 
                                     className="block w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                     placeholder="请输入名称"
-                                    value={newRootName}
-                                    onChange={(e) => setNewRootName(e.target.value)}
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({...formData, name: e.target.value})}
                                 />
                             </div>
                             <div>
                                 <label className="block text-xs font-medium text-slate-700 mb-1">节点类型</label>
                                 <select 
                                     className="block w-full rounded border border-slate-300 px-2 py-1.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    value={newRootType}
-                                    onChange={(e) => setNewRootType(e.target.value)}
+                                    value={formData.type}
+                                    onChange={(e) => setFormData({...formData, type: e.target.value})}
                                 >
                                     <option value="group">集团 (Group)</option>
                                     <option value="school">学校 (School)</option>
                                     <option value="dept">部门 (Dept)</option>
+                                    <option value="grade">年级 (Grade)</option>
+                                    <option value="class">班级 (Class)</option>
                                 </select>
                             </div>
                         </div>
                         <div className="px-4 py-3 bg-slate-50 border-t border-slate-100 flex justify-end space-x-2">
                             <button 
-                                onClick={() => setIsRootModalOpen(false)}
+                                onClick={() => setModalType(null)}
                                 className="px-3 py-1.5 border border-slate-300 rounded text-xs font-medium text-slate-700 hover:bg-white"
                             >
                                 取消
                             </button>
                             <button 
-                                onClick={handleAddRootNode}
+                                onClick={handleSubmit}
                                 className="px-3 py-1.5 bg-blue-600 text-white rounded text-xs font-medium hover:bg-blue-700"
                             >
                                 确定

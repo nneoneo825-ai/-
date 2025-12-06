@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { 
   BarChart, 
@@ -12,7 +13,7 @@ import {
   Scatter,
   ZAxis
 } from 'recharts';
-import { Download, Filter, Search } from 'lucide-react';
+import { Download, Filter, Search, Calendar, ChevronDown, X, ArrowLeft } from 'lucide-react';
 
 // --- Types ---
 interface TeacherMetric {
@@ -33,7 +34,7 @@ interface TeacherMetric {
     tutoring: number; // 辅导督促
     officeDisc: number; // 办公纪律
     praise: number; // 赞美激励
-    hygiene: number; // 卫生物理
+    hygiene: number; // 卫生摆摆
     check: number; // 查课管理
     board: number; // 板书设计
     oral: number; // 英语口语
@@ -69,6 +70,77 @@ interface SchoolTeachingMetric {
     gradeRank: number;
 }
 
+interface ProvincialTeachingMetric {
+    id: string;
+    schoolName: string;
+    design: number;
+    quality: number;
+    guide: number;
+    exercise: number;
+    process: number;
+    selfStudy: number;
+    marking: number;
+    posting: number;
+    progress: number;
+    listening: number;
+    tutoring: number;
+    officeDisc: number;
+    praise: number;
+    hygiene: number;
+    check: number;
+    board: number;
+    oral: number;
+    team: number;
+    schoolScore: number;
+    schoolRank: number;
+}
+
+interface TeachingDetailRecord {
+  id: number;
+  group: string;
+  checkItem: string;
+  content: string;
+  type: '加分' | '减分';
+  score: number;
+  time: string;
+}
+
+interface GradeTeachingDetailRecord {
+  id: number;
+  group: string;
+  teacher: string;
+  checkItem: string;
+  content: string;
+  type: '加分' | '减分';
+  score: number;
+  time: string;
+}
+
+interface SchoolTeachingDetailRecord {
+  id: number;
+  grade: string;
+  group: string;
+  teacher: string;
+  checkItem: string;
+  content: string;
+  type: '加分' | '减分';
+  score: number;
+  time: string;
+}
+
+interface ProvincialTeachingDetailRecord {
+  id: number;
+  school: string;
+  grade: string;
+  group: string;
+  teacher: string;
+  checkItem: string;
+  content: string; // 扣分项/Description
+  type: '加分' | '减分';
+  score: number;
+  time: string;
+}
+
 // --- Mock Data ---
 
 const TEACHER_PERFORMANCE = [
@@ -86,6 +158,35 @@ const PERSONAL_DETAIL_DATA = [
     { id: 4, item: '习题组编', content: '题量小; 难度大或难度小; 资料未带或准备不齐; 未交', score: 0, reason: '-' },
     { id: 5, item: '授课过程', content: '导入时间过长; 老师讲授有照本宣科念学生名字出现的问题; 没老师巡视有组织学生高效讨论; 及时纠正学生的不良行为; 讲不精讲, 激情度不够, 激励学生不到位; 缺没有教材或课堂空环节; 教师形象参差不齐; 学生坐姿情况(睡觉, 吵闹); 学生没有按老师要求正课朗读平板', score: 0, reason: '-' },
     { id: 6, item: '学科自习', content: '自习任务安排不合理, 要求学生有分层; 对学生没有巡查到位; 学生玩游戏不听讲, 发呆, 睡觉, 小动作多等; 教师没有及时管理; 老师坐在教室, 没有在讲台准备', score: 0, reason: '-' },
+];
+
+const MOCK_TEACHING_DETAILS: TeachingDetailRecord[] = [
+  { id: 1, group: '数学', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:48:54' },
+  { id: 2, group: '数学', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:48:53' },
+  { id: 3, group: '数学', checkItem: '授课过程', content: '学生违纪情况 (睡觉、吵闹)', type: '减分', score: 3, time: '2025-11-26 20:45:07' },
+  { id: 4, group: '数学', checkItem: '学科自习', content: '学生自习状态不佳，如睡觉、发呆、小动作多等', type: '减分', score: 3, time: '2025-11-17 19:36:01' },
+  { id: 5, group: '数学', checkItem: '授课过程', content: '学生违纪情况 (睡觉、吵闹)', type: '减分', score: 3, time: '2025-11-17 19:36:01' },
+];
+
+const MOCK_GRADE_TEACHING_DETAILS: GradeTeachingDetailRecord[] = [
+  { id: 1, group: '数学', teacher: '陈泽沛', checkItem: '学科自习', content: '限时习题的题量不够', type: '减分', score: 3, time: '2025-11-26 20:50:55' },
+  { id: 2, group: '历史', teacher: '党元春', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:50:27' },
+  { id: 3, group: '历史', teacher: '张玉芳', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:50:27' },
+  { id: 4, group: '政治', teacher: '侯宇鑫', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:50:13' },
+  { id: 5, group: '政治', teacher: '滑雨晴', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:50:13' },
+  { id: 6, group: '地理', teacher: '张嘉璇', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:49:59' },
+  { id: 7, group: '地理', teacher: '郭白雪', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:49:59' },
+  { id: 8, group: '物理', teacher: '李少伟', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:49:20' },
+  { id: 9, group: '物理', teacher: '薛力', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:49:20' },
+  { id: 10, group: '物理', teacher: '席雅秀', checkItem: '赞美激励', content: '课堂教学中教师对学生赞美激励', type: '加分', score: 3, time: '2025-11-26 20:49:20' },
+];
+
+const MOCK_SCHOOL_TEACHING_DETAILS: SchoolTeachingDetailRecord[] = [
+  { id: 1, grade: '高一', group: '英语', teacher: '王会平', checkItem: '授课过程', content: '学生没有按照老师要求正确使用平板', type: '减分', score: 3, time: '2025-11-12 16:06:48' },
+];
+
+const MOCK_PROVINCIAL_TEACHING_DETAILS: ProvincialTeachingDetailRecord[] = [
+    { id: 1, school: '长水实验中学杨凌校区', grade: '高一', group: '英语', teacher: '王会平', checkItem: '授课过程', content: '学生没有按照老师要求正确使用平板', type: '减分', score: 3, time: '2025-11-12 16:06:48' },
 ];
 
 const GRADE_REPORT_DATA: TeacherMetric[] = [
@@ -111,6 +212,17 @@ const SCHOOL_TEACHING_DATA: SchoolTeachingMetric[] = [
     { grade: '高一', design: 0, quality: 0, guide: 0, exercise: 0, process: -3, selfStudy: 0, marking: 0, posting: 0, progress: 0, listening: 0, tutoring: 0, officeDisc: 0, praise: 0, hygiene: 0, check: 0, board: 0, oral: 0, team: 0, gradeScore: -3, gradeRank: 2 },
     { grade: '高二', design: 0, quality: 0, guide: 0, exercise: 0, process: 0, selfStudy: 0, marking: 0, posting: 0, progress: 0, listening: 0, tutoring: 0, officeDisc: 0, praise: 0, hygiene: 0, check: 0, board: 0, oral: 0, team: 0, gradeScore: 0, gradeRank: 1 },
     { grade: '高三', design: 0, quality: 0, guide: 0, exercise: 0, process: 0, selfStudy: 0, marking: 0, posting: 0, progress: 0, listening: 0, tutoring: 0, officeDisc: 0, praise: 0, hygiene: 0, check: 0, board: 0, oral: 0, team: 0, gradeScore: 0, gradeRank: 1 },
+];
+
+const PROVINCIAL_TEACHING_DATA: ProvincialTeachingMetric[] = [
+    { 
+        id: '1', 
+        schoolName: '长水实验中学杨凌校区', 
+        design: 0, quality: 0, guide: 0, exercise: 0, process: -3, selfStudy: 0, 
+        marking: 0, posting: 0, progress: 0, listening: 0, tutoring: 0, 
+        officeDisc: 0, praise: 0, hygiene: 0, check: 0, board: 0, oral: 0, team: 0, 
+        schoolScore: -3, schoolRank: 1 
+    },
 ];
 
 // --- Components ---
@@ -155,17 +267,76 @@ const TeachingManagement: React.FC = () => {
         {activeTab === 'personal' && <TeachingPersonalReport />}
         {activeTab === 'grade' && <TeachingGradeReport />}
         {activeTab === 'school' && <TeachingSchoolReport />}
-        {activeTab === 'provincial' && (
-            <div className="flex h-64 items-center justify-center rounded-lg border-2 border-dashed border-slate-300 bg-slate-50">
-                <p className="text-slate-500">省公司报表功能开发中...</p>
-            </div>
-        )}
+        {activeTab === 'provincial' && <TeachingProvincialReport />}
       </div>
     </div>
   );
 };
 
 const TeachingPersonalReport: React.FC = () => {
+    const [view, setView] = useState<'summary' | 'detail'>('summary');
+
+    if (view === 'detail') {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex-1"></div>
+                    <h2 className="text-2xl font-bold text-slate-900 text-center flex-1 whitespace-nowrap">个人教学量化详情</h2>
+                    <div className="flex-1 flex justify-end space-x-3">
+                         <button 
+                            onClick={() => setView('summary')}
+                            className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 flex items-center"
+                         >
+                             返回
+                         </button>
+                         <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 flex items-center">
+                             导出
+                         </button>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">教研组</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">检查项</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider w-1/3">扣分项</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">加分/减分</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">分数</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">时间</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-200">
+                            {MOCK_TEACHING_DETAILS.map((record) => (
+                                <tr key={record.id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.group}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.checkItem}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-600">{record.content}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-600">{record.type}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.score}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-500">{record.time}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-center space-x-2 text-sm text-slate-600">
+                       <span>共 {MOCK_TEACHING_DETAILS.length} 条</span>
+                       <select className="border-slate-300 rounded text-sm py-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                           <option>20条/页</option>
+                       </select>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">&lt;</button>
+                       <button className="px-2 py-1 text-blue-600 font-bold">1</button>
+                       <button className="px-2 py-1 text-slate-600 hover:text-blue-600">&gt;</button>
+                       <span>前往</span>
+                       <input type="text" defaultValue="1" className="w-10 border border-slate-300 rounded text-center py-1 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
+                       <span>页</span>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
             {/* Header/Filter */}
@@ -211,7 +382,12 @@ const TeachingPersonalReport: React.FC = () => {
                     </div>
                     <div className="flex space-x-2">
                         <button className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">查询</button>
-                        <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">查看详情</button>
+                        <button 
+                            onClick={() => setView('detail')}
+                            className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                        >
+                            查看详情
+                        </button>
                         <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">导出报表</button>
                     </div>
                 </div>
@@ -318,6 +494,76 @@ const TeachingPersonalReport: React.FC = () => {
 };
 
 const TeachingGradeReport: React.FC = () => {
+    const [view, setView] = useState<'summary' | 'detail'>('summary');
+
+    if (view === 'detail') {
+        return (
+             <div className="space-y-6">
+                <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex-1"></div>
+                    <h2 className="text-2xl font-bold text-slate-900 text-center flex-1 whitespace-nowrap">高一 年级教学量化详情</h2>
+                    <div className="flex-1 flex justify-end space-x-3">
+                         <button 
+                            onClick={() => setView('summary')}
+                            className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 flex items-center"
+                         >
+                             返回
+                         </button>
+                         <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 flex items-center">
+                             导出
+                         </button>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">教研组</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">老师</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">检查项</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider w-1/3">扣分项</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">加分/减分</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">分数</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">时间</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-200">
+                            {MOCK_GRADE_TEACHING_DETAILS.map((record) => (
+                                <tr key={record.id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.group}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.teacher}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.checkItem}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-600">{record.content}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-600">{record.type}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.score}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-500">{record.time}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    {/* Pagination */}
+                    <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-center space-x-2 text-sm text-slate-600">
+                       <span>共 50 条</span>
+                       <select className="border-slate-300 rounded text-sm py-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                           <option>10条/页</option>
+                       </select>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">&lt;</button>
+                       <button className="px-2 py-1 text-blue-600 font-bold">1</button>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">2</button>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">3</button>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">4</button>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">5</button>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">&gt;</button>
+                       <span>前往</span>
+                       <input type="text" defaultValue="1" className="w-10 border border-slate-300 rounded text-center py-1 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
+                       <span>页</span>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col space-y-6">
@@ -348,7 +594,12 @@ const TeachingGradeReport: React.FC = () => {
                           <button className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">查询</button>
                           <button className="px-4 py-2 border border-slate-300 rounded text-sm hover:bg-slate-50">重置</button>
                           <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">导出Excel</button>
-                          <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">详情页</button>
+                          <button 
+                             onClick={() => setView('detail')}
+                             className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                          >
+                             详情页
+                          </button>
                       </div>
                  </div>
             </div>
@@ -441,6 +692,73 @@ const TeachingGradeReport: React.FC = () => {
 };
 
 const TeachingSchoolReport: React.FC = () => {
+    const [view, setView] = useState<'summary' | 'detail'>('summary');
+
+    if (view === 'detail') {
+        return (
+            <div className="space-y-6">
+                <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex-1"></div>
+                    <h2 className="text-2xl font-bold text-slate-900 text-center flex-1 whitespace-nowrap">长水实验中学杨凌校区 校级教学量化详情</h2>
+                    <div className="flex-1 flex justify-end space-x-3">
+                         <button 
+                            onClick={() => setView('summary')}
+                            className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 flex items-center"
+                         >
+                             返回
+                         </button>
+                         <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 flex items-center">
+                             导出
+                         </button>
+                    </div>
+                </div>
+
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">年级</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">教研组</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">老师</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">检查项</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider w-1/3">扣分项</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">加分/减分</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">分数</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">时间</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-200">
+                            {MOCK_SCHOOL_TEACHING_DETAILS.map((record) => (
+                                <tr key={record.id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.grade}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.group}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.teacher}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.checkItem}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-600">{record.content}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-600">{record.type}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.score}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-500">{record.time}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-center space-x-2 text-sm text-slate-600">
+                       <span>共 {MOCK_SCHOOL_TEACHING_DETAILS.length} 条</span>
+                       <select className="border-slate-300 rounded text-sm py-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                           <option>20条/页</option>
+                       </select>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">&lt;</button>
+                       <button className="px-2 py-1 text-blue-600 font-bold">1</button>
+                       <button className="px-2 py-1 text-slate-600 hover:text-blue-600">&gt;</button>
+                       <span>前往</span>
+                       <input type="text" defaultValue="1" className="w-10 border border-slate-300 rounded text-center py-1 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
+                       <span>页</span>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
   return (
         <div className="space-y-6">
             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex flex-col space-y-6">
@@ -465,7 +783,12 @@ const TeachingSchoolReport: React.FC = () => {
                           <button className="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700">查询</button>
                           <button className="px-4 py-2 border border-slate-300 rounded text-sm hover:bg-slate-50">重置</button>
                           <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">导出Excel</button>
-                          <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600">详情页</button>
+                          <button 
+                             onClick={() => setView('detail')}
+                             className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                          >
+                             详情页
+                          </button>
                       </div>
                  </div>
             </div>
@@ -552,5 +875,224 @@ const TeachingSchoolReport: React.FC = () => {
         </div>
   );
 };
+
+const TeachingProvincialReport: React.FC = () => {
+    const [view, setView] = useState<'summary' | 'detail'>('summary');
+
+    if (view === 'detail') {
+        return (
+             <div className="space-y-6">
+                 {/* Header */}
+                <div className="flex items-center justify-between bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex-1"></div>
+                    <h2 className="text-2xl font-bold text-slate-900 text-center flex-1 whitespace-nowrap">陕西公司 教学事务部教学量化详情</h2>
+                    <div className="flex-1 flex justify-end space-x-3">
+                         <button 
+                            onClick={() => setView('summary')}
+                            className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 flex items-center"
+                         >
+                             返回
+                         </button>
+                         <button className="px-4 py-2 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 flex items-center">
+                             导出
+                         </button>
+                    </div>
+                </div>
+
+                {/* Detail Table */}
+                <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                            <tr>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">学校</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">年级</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">教研组</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">老师</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">检查项</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider w-1/3">扣分项</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">加分/减分</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">分数</th>
+                                <th className="px-6 py-4 text-center text-sm font-medium text-slate-500 uppercase tracking-wider">时间</th>
+                            </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-slate-200">
+                            {MOCK_PROVINCIAL_TEACHING_DETAILS.map((record) => (
+                                <tr key={record.id} className="hover:bg-slate-50">
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.school}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.grade}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.group}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.teacher}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.checkItem}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-600">{record.content}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-600">{record.type}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-900">{record.score}</td>
+                                    <td className="px-6 py-4 text-sm text-center text-slate-500">{record.time}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    {/* Pagination */}
+                    <div className="px-6 py-4 border-t border-slate-200 bg-slate-50 flex items-center justify-center space-x-2 text-sm text-slate-600">
+                       <span>共 {MOCK_PROVINCIAL_TEACHING_DETAILS.length} 条</span>
+                       <select className="border-slate-300 rounded text-sm py-1 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                           <option>20条/页</option>
+                       </select>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">&lt;</button>
+                       <button className="px-2 py-1 text-blue-600 font-bold">1</button>
+                       <button className="px-2 py-1 text-slate-400 hover:text-blue-600">&gt;</button>
+                       <span>前往</span>
+                       <input type="text" defaultValue="1" className="w-10 border border-slate-300 rounded text-center py-1 focus:ring-blue-500 focus:border-blue-500 outline-none"/>
+                       <span>页</span>
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="space-y-6">
+             <div className="text-center py-4">
+                 <h2 className="text-2xl font-bold text-slate-900">陕西公司 教学事务部教学量化表</h2>
+             </div>
+
+             {/* Filter Bar */}
+             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex flex-wrap items-center gap-6">
+                        <div className="flex items-center space-x-2">
+                             <span className="text-sm font-medium text-slate-600">时间范围</span>
+                             <div className="flex items-center border border-slate-300 rounded-md overflow-hidden bg-white">
+                                 <span className="pl-3 py-2 bg-slate-50 border-r border-slate-200">
+                                     <Calendar size={16} className="text-slate-500"/>
+                                 </span>
+                                 <input type="date" className="py-2 px-3 text-sm focus:outline-none bg-transparent" defaultValue="2025-11-01"/>
+                                 <span className="px-2 text-slate-400 text-sm">至</span>
+                                 <input type="date" className="py-2 px-3 text-sm focus:outline-none bg-transparent" defaultValue="2025-11-30"/>
+                             </div>
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-slate-600">省公司</span>
+                            <select className="py-2 px-3 border border-slate-300 rounded-md text-sm min-w-[120px] focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                                <option>陕西公司</option>
+                            </select>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm font-medium text-slate-600">学校</span>
+                            <div className="relative">
+                                <select className="py-2 pl-3 pr-8 border border-slate-300 rounded-md text-sm min-w-[200px] focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white text-slate-700">
+                                    <option>长水实验中学杨凌校区</option>
+                                </select>
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <ChevronDown size={14} className="text-slate-400"/>
+                                </div>
+                                <button className="absolute right-7 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                     <X size={12} />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center space-x-3">
+                         <button className="px-5 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 transition-colors">查询</button>
+                         <button className="px-5 py-2 border border-slate-300 bg-white text-slate-700 rounded-md text-sm font-medium hover:bg-slate-50 transition-colors">重置</button>
+                         <button className="px-5 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 transition-colors">导出Excel</button>
+                         <button onClick={() => setView('detail')} className="px-5 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 transition-colors">详情页</button>
+                    </div>
+                </div>
+             </div>
+
+             {/* Table */}
+             <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                     <div className="text-sm font-medium text-slate-700 mx-auto">长水教育集团陕西公司教学事务部教学量化表</div>
+                     <div className="text-xs text-slate-500 absolute right-6">
+                         <span className="mr-4">部门: 教学事务部</span>
+                         <span>日期: 2025-12-06</span>
+                     </div>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="min-w-full border-collapse border border-slate-200 text-center text-xs">
+                        <thead className="bg-slate-50 text-slate-600">
+                             <tr>
+                                 <th className="border border-slate-200 px-3 py-3 font-medium bg-slate-50 min-w-[150px]">学校</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">教学设计</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">教研质量</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">导纲制作</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">习题组编</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">授课过程</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">学科自习</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">习题批阅</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">成绩贴评</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">教学进度</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">听课评课</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">辅导督促</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">办公纪律</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">赞美激励</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">卫生摆摆</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">查课管理</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">板书设计</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">英语口语</th>
+                                 <th className="border border-slate-200 px-2 py-3 font-medium">小组建设</th>
+                                 <th className="border border-slate-200 px-3 py-3 font-medium bg-slate-50">学校得分</th>
+                                 <th className="border border-slate-200 px-3 py-3 font-medium bg-slate-50">学校排名</th>
+                             </tr>
+                        </thead>
+                        <tbody className="bg-white">
+                            {PROVINCIAL_TEACHING_DATA.map((row) => (
+                                <tr key={row.id} className="hover:bg-slate-50 text-slate-600">
+                                    <td className="border border-slate-200 px-3 py-3 text-left font-medium text-slate-800">{row.schoolName}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.design}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.quality}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.guide}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.exercise}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.process}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.selfStudy}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.marking}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.posting}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.progress}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.listening}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.tutoring}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.officeDisc}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.praise}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.hygiene}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.check}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.board}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.oral}</td>
+                                    <td className="border border-slate-200 px-2 py-3">{row.team}</td>
+                                    <td className="border border-slate-200 px-3 py-3 font-bold text-slate-800">{row.schoolScore}</td>
+                                    <td className="border border-slate-200 px-3 py-3 font-bold text-blue-600">{row.schoolRank}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+             </div>
+
+             {/* Analysis Section */}
+             <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                 <h3 className="text-lg font-bold text-slate-800">分析评价</h3>
+                 
+                 <div className="relative">
+                     <textarea 
+                        className="w-full h-32 p-4 border border-slate-200 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500 resize-none placeholder-slate-400 bg-white"
+                        placeholder="请输入分析评价内容..."
+                     ></textarea>
+                     <div className="absolute bottom-3 right-3 text-xs text-slate-400">提示: 最多输入2000字</div>
+                      <div className="absolute bottom-2 right-2">
+                        <div className="h-3 w-3 bg-slate-300 transform rotate-45 translate-x-1.5 translate-y-1.5 cursor-se-resize"></div>
+                     </div>
+                 </div>
+
+                 <div>
+                     <button className="px-6 py-2 bg-blue-500 text-white rounded-md text-sm font-medium hover:bg-blue-600 transition-colors shadow-sm">
+                         保存评价
+                     </button>
+                 </div>
+             </div>
+        </div>
+    )
+}
 
 export default TeachingManagement;
